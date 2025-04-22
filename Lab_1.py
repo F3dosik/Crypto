@@ -1,7 +1,7 @@
 import string, heapq
 from pathlib import Path
 
-from Statistic import keep_russian_letters, load_json, symbol_stats, extract_distribution, align_distributions, \
+from Statistic import keep_russian_letters, load_json, symbol_stats, align_distributions, \
     compare_distributions_JS
 
 rus = ['а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т',
@@ -26,19 +26,18 @@ def gcdex(a, b):
     y = x1
     return (d, x, y)
 
-
+# Функция поиска лучшего ключа по заданным рядам распределения
 def find_best_key(reference_data, candidate_data):
     """
     Находит ключ, который дает распределение, наиболее близкое к эталонному.
     """
-    reference_distribution = [reference_data['stats'][letter]["count"] for letter in reference_data['stats'].keys()]
+    reference_distribution = [reference_data['stats'][letter]['count'] for letter in reference_data['stats'].keys()]
 
     best_key = None
     min_distance = float('inf')
-
     for key, candidate_distribution in candidate_data.items():
-        candidate_distribution = extract_distribution(candidate_distribution)
-
+        candidate_distribution = [candidate_distribution['stats'][letter]['count'] for letter in
+                                  candidate_distribution['stats'].keys()]
         # Выбираем метод сравнения (например, Йенсена-Шеннона)
         distance = compare_distributions_JS(reference_distribution, candidate_distribution)
 
@@ -48,8 +47,11 @@ def find_best_key(reference_data, candidate_data):
 
     return best_key, min_distance
 
+
 # Шифр Цезаря
 def encrypt_caesar(text, k, abc=None, info: bool = False):
+    print(f'Открытый текст: {text}')
+
     if abc is None:
         abc = rus
     text = keep_russian_letters(text)
@@ -60,6 +62,8 @@ def encrypt_caesar(text, k, abc=None, info: bool = False):
             print(f"{abc.index(s)} {s} -> {(abc.index(s) + k) % n} {abc[(abc.index(s) + k) % n]}")
 
     res = ''.join(abc[(abc.index(char) + k) % n] for char in text)
+    if k > 0:
+        print(f'Результат шифрования: {res}')
     return res
 
 
@@ -77,70 +81,119 @@ def hacking_caesar(text, abc=None):
 
     n = len(abc)
 
-    reference_stats = load_json(Path('statistic.json'))
-    ciphertext_stats = symbol_stats(text)
+    reference_data = load_json(Path('statistic.json'))
+    ciphertext_data = symbol_stats(text)
 
     candidates = {}
 
+    reference_stats = list(reference_data['stats'].items())
+    ciphertext_stats = list(ciphertext_data['stats'].items())
     for i in range(5):
         for j in range(5):
-            cand_symbol = list(reference_stats['stats'].items())[i][0]
+            cand_symbol = reference_stats[i][0]
             cand_symbol_ind = abc.index(cand_symbol)
 
-            ref_symbol = list(ciphertext_stats['stats'].items())[j][0]
+            ref_symbol = ciphertext_stats[j][0]
             ref_symbol_ind = abc.index(ref_symbol)
 
             k = (ref_symbol_ind - cand_symbol_ind) % n
 
-            candidate_stats = {"total_symbols": ciphertext_stats['total_symbols'], "stats": {}}
+            candidate_data = {"total_symbols": ciphertext_data['total_symbols'], "stats": {}}
+            candidate_stats = candidate_data['stats']
             # Меняем ряд распределения текста по ключу
-            for letter in ciphertext_stats['stats']:
-                candidate_stats['stats'][abc[(abc.index(letter) - k) % n]] = ciphertext_stats['stats'][letter]
+            for letter in candidate_stats:
+                candidate_stats[abc[(abc.index(letter) - k) % n]] = ciphertext_stats[letter]
 
-            align_distributions(reference_stats, candidate_stats)
+            candidate_data['stats'] = candidate_stats
 
-            candidates[k] = candidate_stats
-    for k, candidate in candidates.items():
+            # Добавляем отсутствующие символы в статистике
+            align_distributions(reference_data, candidate_data)
 
+            # candidates = dict: {key: int, stats: {letter: {count: int, percent: float}}}
+            candidates[k] = candidate_data
 
+    k, d = find_best_key(reference_data, candidates)
+    print(f'Лучшим ключом сдвига является: k = {k} с расстоянием Йенсена-Шеннона d = {d}')
+    print(f'Результат дешифрования: {encrypt_caesar(text, -k)}')
 
+# Аффинный шифр
 def encrypt_affine(text: str, a: int, b: int, abc=None, info: bool = False):
+    print(f'Открытый текст: {text}')
+
     if abc is None:
         abc = rus
+
     n = len(abc)
+
+    # Проверка взаимной простоты a и n
     while gcd(a, n) != 1:
-        coprimes = [i for i in range(1, n) if gcd(i, n) == 1]
+        coprime_list = [i for i in range(1, n) if gcd(i, n) == 1]
         print(
             "Ошибка! Коэффициент a должен быть взаимнопрост с мощностью алфавита.\nВыберите новый коэффициент из предложенных: ")
-        a = int(input(f"{coprimes}\n"))
-    translator = str.maketrans('', '', string.punctuation)
-    text = text.translate(translator).lower()
+        a = int(input(f"{coprime_list}\n"))
+
+    # Убираем лишние символы
+    text = keep_russian_letters(text)
+
     if info:
         print(f"Шифрование y = ax + b, где a = {a}, b = {b}.")
         for s in abc:
             print(f"{abc.index(s)} {s} -> {(abc.index(s) * a + b) % n} {abc[(abc.index(s) * a + b) % n]}")
-    res = ''.join(abc[(abc.index(char) * a + b) % n] for char in text)
+
+    res = ''.join(abc[(abc.index(letter) * a + b) % n] for letter in text)
+    print(f'Результат шифрования: {res}')
     return res
 
 
 def decrypt_affine(text: str, a: int, b: int, abc=None):
     if abc is None:
         abc = rus
+
     n = len(abc)
+
     while gcd(a, n) != 1:
         coprimes = [i for i in range(1, n) if gcd(i, n) == 1]
         print(
             "Ошибка! Коэффициент a должен быть взаимнопрост с мощностью алфавита.\nВыберите новый коэффициент из предложенных: ")
         a = int(input(f"{coprimes}\n"))
+    # поиск обратного с помощью расширенного алгоритма Евклида
     ar = (gcdex(a, n)[1]) % n
-    res = ''.join(abc[((abc.index(char) - b) * ar) % n] for char in text)
+
+    res = ''.join(abc[((abc.index(letter) - b) * ar) % n] for letter in text)
+
     return res
 
 
 def hacking_affine(text: str, abc=None):
     if abc is None:
         abc = rus
+
     n = len(abc)
+
+    reference_data = load_json(Path('statistic.json'))
+    reference_stats = reference_data['stats']
+
+    ciphertext_data = symbol_stats(text)
+    ciphertext_stats = ciphertext_data['stats']
+
+
+    for i in range(3):
+        if i == 0:
+            x1 = list(reference_data['stats'].items())[0][0]
+            x1_ind = abc.index(x1)
+            x2 = list(reference_data['stats'].items())[1][0]
+            x2_ind = abc.index(x2)
+        elif i == 1:
+            x1 = list(reference_data['stats'].items())[0][0]
+            x1_ind = abc.index(x1)
+            x2 = list(reference_data['stats'].items())[2][0]
+            x2_ind = abc.index(x2)
+        elif i == 2:
+            x1 = list(reference_data['stats'].items())[1][0]
+            x1_ind = abc.index(x1)
+            x2 = list(reference_data['stats'].items())[2][0]
+            x2_ind = abc.index(x2)
+
     x1 = abc.index(" ")  # first_ind
     if abc == rus:
         x2 = abc.index("о")
@@ -161,61 +214,6 @@ def encrypt_replacement(text: str, abc: dict[str, str]):
         res += abc[symb]
     return res
 
-
-hacking_caesar("Привет мир")
-
-# abc_replace = {'а': 'б', 'б':'в', 'в':'г', 'г':'д', 'д':'е', 'е':'а'}
-# print(encrypt_replacement("абвгде", abc_replace))
-#
-# texteng = "The sun rises over the ocean waves bringing light warmth and hope for a new day full of endless possibilities"
-# textrus = "Это пример текста, который содержит ровно сто символов без учета знаков препинания."
-#
-# enc = encrypt_affine(textrus, 4, 2, rus, True)
-# print(decrypt_affine(enc, 4, 2))
-# print(hacking_affine(enc))
-
-
-# while True:
-#     encrypt_type = input(
-#         "Выберите способ шифрования: \n1 - Шифр Цезаря;\n2 - Афинный шифр;\n3 - Общий случай.\nВведите число (1-3): ")
-#     if encrypt_type.isdigit():
-#         if int(encrypt_type) >= 1 and int(encrypt_type) <= 3:
-#             break
-#     print("Ошибка ввода!")
-#     encrypt_type = input(
-#         "Выберите способ шифрования: \n1 - Шифр Цезаря;\n2 - Афинный шифр;\n3 - Общий случай.\nВведите число (1-3): ")
-#
-# text = ''
-#
-# while True:
-#     q1 = input(
-#         "Выберите способ задния текста:\n1 - Ввести с клавиатуры;\n2 - Выбрать тестовый текст.\nВведите число (1-2): ")
-#     if q1.isdigit():
-#         if int(q1) >= 1 and int(q1) <= 3:
-#             break
-#     print("Ошибка ввода!")
-#     q1 = input(
-#         "Выберите способ задния текста:\n1 - Ввести с клавиатуры;\n2 - Выбрать тестовый текст.\nВведите число (1-2): ")
-# lang = rus
-# if q1 == '1':
-#     while True:
-#         lang = input("Выберите язык алфавита:\n1 - Русский;\n2 - Английский.\nВведите число (1-2): ")
-#         if lang.isdigit():
-#             if int(lang) >= 1 and int(lang) <= 2:
-#                 break
-#         print("Ошибка ввода!")
-#         lang = input("Выберите язык алфавита:\n1 - Русский;\n2 - Английский.\nВведите число (1-2): ")
-#     if lang == "1":
-#         lang = rus
-#     elif lang == '2':
-#         lang = eng
-#     text = input("Введите текст для шифрования:\n")
-#
-#
-# elif q1 == '2':
-#     text = "Это пример текста, который содержит ровно сто символов без учета знаков препинания."
-#
-# if encrypt_type == '1':
-#     k = int(input("Введите число сдвига: "))
-#     text = encrypt_caesar(text, k, lang)
-#     print(decrypt_caesar(text, lang))
+# Проверка работоспособности дешифратора шифра Цезаря
+# for k in range(33):
+#     hacking_caesar(encrypt_caesar("Брехня! — уверенно опровергал широколицый красногвардеец. — Брехню вам всучивают. Я перед тем как из Ростова выйтить, в церкву ходил и причастие принимал.", k))

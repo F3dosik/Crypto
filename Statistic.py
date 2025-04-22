@@ -20,19 +20,22 @@ def create_json(file_path):
     print(f"Файл {file_path} создан.")
 
 
-def load_json(path) -> dict:
+def load_json(path, log_mode = False) -> dict:
     """
     Загружает данные из JSON-файла.
     Если файл не существует, пуст или поврежден, создает новый файл или завершает программу.
     """
+
     if path.exists():
         if path.stat().st_size == 0:
-            print("Файл пуст. Создаем новый JSON.")
+            if log_mode:
+                print("Файл пуст. Создаем новый JSON.")
             create_json(path)
 
         try:
             with path.open("r", encoding="utf-8") as file:
-                print("Файл успешно загружен.")
+                if log_mode:
+                    print("Файл успешно загружен.")
                 return json.load(file)
 
         except json.JSONDecodeError:
@@ -47,7 +50,8 @@ def load_json(path) -> dict:
                 else:
                     print("Некорректный ввод. Введите 'Y' или 'N'.")
     else:
-        print("Файл statistic.json не существовал. Создан новый JSON.")
+        if log_mode:
+            print("Файл statistic.json не существовал. Создан новый JSON.")
         create_json(path)
         return {}
 
