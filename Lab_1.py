@@ -1,5 +1,7 @@
-import string, heapq
+import string, heapq, random
 from pathlib import Path
+
+from scipy.spatial import distance_matrix
 
 from Statistic import keep_russian_letters, load_json, symbol_stats, align_distributions, \
     compare_distributions_JS
@@ -26,194 +28,102 @@ def gcdex(a, b):
     y = x1
     return (d, x, y)
 
-# Функция поиска лучшего ключа по заданным рядам распределения
-def find_best_key(reference_data, candidate_data):
-    """
-    Находит ключ, который дает распределение, наиболее близкое к эталонному.
-    """
-    reference_distribution = [reference_data['stats'][letter]['count'] for letter in reference_data['stats'].keys()]
 
-    best_key = None
-    min_distance = float('inf')
-    for key, candidate_distribution in candidate_data.items():
-        candidate_distribution = [candidate_distribution['stats'][letter]['count'] for letter in
-                                  candidate_distribution['stats'].keys()]
-        # Выбираем метод сравнения (например, Йенсена-Шеннона)
-        distance = compare_distributions_JS(reference_distribution, candidate_distribution)
-
-        if distance < min_distance:
-            min_distance = distance
-            best_key = key
-
-    return best_key, min_distance
+def shuffle_string(s):
+    # Преобразуем строку в список символов (так как строки неизменяемы)
+    chars = list(s)
+    # Перемешиваем символы
+    random.shuffle(chars)
+    # Собираем обратно в строку
+    return ''.join(chars)
 
 
-# Шифр Цезаря
-def encrypt_caesar(text, k, abc=None, info: bool = False):
-    print(f'Открытый текст: {text}')
+def swap_two_random_chars(s):
+    # Преобразуем строку в список символов (так как строки неизменяемы)
+    chars = list(s)
+    # Выбираем два случайных индекса
+    i, j = random.sample(range(len(chars)), 2)
+    # Меняем символы местами
+    chars[i], chars[j] = chars[j], chars[i]
+    # Собираем обратно в строку
+    return ''.join(chars)
 
-    if abc is None:
-        abc = rus
-    text = keep_russian_letters(text)
-    n = len(abc)
 
-    if info:
-        for s in abc:
-            print(f"{abc.index(s)} {s} -> {(abc.index(s) + k) % n} {abc[(abc.index(s) + k) % n]}")
-
-    res = ''.join(abc[(abc.index(char) + k) % n] for char in text)
-    if k > 0:
-        print(f'Результат шифрования: {res}')
+def decrypt_ciphertext(ciphertext, key):
+    res = ''
+    for i in range(len(ciphertext)):
+         res += key[rus.index(ciphertext[i])]
     return res
 
 
-# Расшифрование шифра Цезаря
-def decrypt_caesar(text, k, abc=None):
-    if abc is None:
-        abc = rus
-    return encrypt_caesar(text, -k, abc)
+def hack_ciphertext(ciphertext):
+    # Инициализируем k случайным перемешиванием алфавита
+    # shuffle_abc = rus[:]
+    # random.shuffle(shuffle_abc)
+    # key = shuffle_abc
+    key = "ущри чзвдглыфьэтошбякймесжаънцюпх"
+    print(key)
 
 
-# Дешифрование шифра Цезаря
-def hacking_caesar(text, abc=None):
-    if abc is None:
-        abc = rus
+    temp_decrypt = decrypt_ciphertext(ciphertext, key)
 
-    n = len(abc)
+    temp_decrypt_data = symbol_stats(temp_decrypt)
+    reference_data = load_json(Path("statistic.json"))
 
-    reference_data = load_json(Path('statistic.json'))
-    ciphertext_data = symbol_stats(text)
+    distance = compare_distributions_JS(reference_data, temp_decrypt_data)
 
-    candidates = {}
+    key_stability = 0
 
-    reference_stats = list(reference_data['stats'].items())
-    ciphertext_stats = list(ciphertext_data['stats'].items())
-    for i in range(5):
-        for j in range(5):
-            cand_symbol = reference_stats[i][0]
-            cand_symbol_ind = abc.index(cand_symbol)
+    while key_stability != 10000:
+        key_tmp = swap_two_random_chars(key)
+        temp_decrypt = decrypt_ciphertext(ciphertext, key_tmp)
+        temp_decrypt_data = symbol_stats(temp_decrypt)
+        temp_distance = compare_distributions_JS(reference_data, temp_decrypt_data)
+        if temp_distance < distance:
+            distance = temp_distance
+            key_stability = 0
+            key = key_tmp
+        elif temp_distance >= distance:
+            key_stability += 1
+        print("Новый шаг --------------------------------")
+        print(distance)
+        print(temp_decrypt)
 
-            ref_symbol = ciphertext_stats[j][0]
-            ref_symbol_ind = abc.index(ref_symbol)
+    # print(key)
+    # print(distance)
+    return decrypt_ciphertext(ciphertext, key)
 
-            k = (ref_symbol_ind - cand_symbol_ind) % n
+plaintext = """ Убери все символы переноса строки
+Новое лицо это был молодой князь Андрей Болконский, муж маленькой княгини. Не столько по тому, что молодой князь приехал так поздно, но все-таки был принят хозяйкой самым любезным образом, сколько по тому, как он вошел в комнату, было видно, что он один из тех светских молодых людей, которые так избалованы светом, что даже презирают его. Молодой князь был небольшого роста, весьма красивый, сухощавый брюнет, с несколько истощенным видом, коричневым цветом лица, в чрезвычайно изящной одежде и с крошечными руками и ногами. Все в его фигуре, начиная от усталого, скучающего взгляда до ленивой и слабой походки, представляло самую резкую противоположность с его маленькою, оживленною женой. Ему, видимо, все бывшие в гостиной не только были знакомы, но уж надоели ему так, что и смотреть на них и слушать их ему было очень скучно, потому что он вперед знал все, что будет. Из всех же прискучивших ему лиц лицо его хорошенькой жены, казалось, больше всех ему надоело. С кислою, слабою гримасой, портившей его красивое лицо, он отвернулся от нее, как будто подумал: "Тебя только недоставало, чтобы вся эта компания совсем мне опротивела". Он поцеловал руку Анны Павловны с таким видом, как будто готов был бог знает что дать, чтоб избавиться от этой тяжелой обязанности, и щурясь, почти закрывая глаза и морщась, оглядывал все общество.
+   -- У вас съезд, -- сказал он тоненьким голоском и кивнул головой кое-кому, кое-кому подставил свою руку, предоставляя ее пожатию.
+   -- Вы собираетесь на войну, князь? -- сказала Анна Павловна.
+   -- Генерал Кутузов, -- сказал он, ударяя на последнем слоге зов как француз, снимая перчатку с белейшей, крошечной руки и потирая ею глаза, -- генерал-аншеф Кутузов зовет меня к себе в адъютанты.
+   -- А Лиза, ваша жена?
+   -- Она поедет в деревню.
+   -- Как вам не грех лишать нас вашей прелестной жены?
+   Молодой адъютант сделал выпяченными губами презрительный звук, какой делают только французы, и ничего не отвечал.
+   -- Андрей, -- сказала его жена, обращаясь к мужу тем же кокетливым тоном, каким она обращалась и к посторонним, -- подите сюда, садитесь, послушайте, какую историю рассказывает виконт о мадемуазель Жорж и Буонапарте.
+   Андрей зажмурился и сел совсем в другую сторону, как будто не слышал жены.
+   -- Продолжайте, виконт, -- сказала Анна Павловна. -- Виконт рассказывал, как герцог Энгиенский бывал у мадемуазель Жорж, -- прибавила она, обращаясь к вошедшему, чтобы он мог следить за продолжением рассказа.
+   -- Мнимое соперничество Буонапарте и герцога из-за Жорж, -- сказал князь Андрей таким тоном, как будто смешно было кому-нибудь не знать про это, и повалился на ручку кресла. В это время молодой человек в очках, называемый мсье Пьер, со времени входа князя Андрея в гостиную не спускавший с него радостных, дружелюбных глаз, подошел к нему и взял его за руку. Князь Андрей так мало был любопытен, что, не оглядываясь, сморщил наперед лицо в гримасу, выражавшую досаду на того, кто трогает его, но, увидав улыбающееся лицо Пьера, улыбнулся тоже, и вдруг все лицо его преобразилось. Доброе и умное выражение вдруг явилось на нем.
+   -- Как? Ты здесь, кавалергард мой милый? -- спросил князь радостно, но с покровительственным и надменным оттенком.
+   -- Я знал, что вы будете, -- отвечал Пьер. -- Я приеду к вам ужинать, -- прибавил он тихо, чтобы не мешать виконту, который продолжал свой рассказ. -- Можно?
+   -- Нет, нельзя, -- сказал князь Андрей, смеясь и отворачиваясь, но пожатием руки давая знать Пьеру, что этого не нужно было спрашивать.
+   Виконт рассказал, как мадемуазель Жорж умоляла герцога спрятаться, как герцог сказал, что он никогда ни перед кем не прятался, как мадемуазель Жорж сказала ему: "Ваше высочество, ваша шпага принадлежит королю и Франции", -- и как герцог все-таки спрятался под белье в другой комнате, и как Наполеону сделалось дурно, и герцог вышел из-под белья и увидел перед собой Буонапарте.
+   -- Прелестно, восхитительно! -- послышалось между слушателями.
+   Даже Анна Павловна, заметив, что самое затруднительное место истории пройдено благополучно, и успокоившись, вполне могла наслаждаться рассказом. Виконт разгорелся и, грассируя, говорил с одушевлением актера...
+   -- Враг его дома, похититель трона, тот, кто возглавлял его нацию, был здесь, перед ним, неподвижно распростертый на земле и, может быть, при последнем издыхании. Как говорил великий Корнель: "Злобная радость поднималась в его сердце, и только оскорбленное величие помогло ему не поддаться ей".
+   Виконт остановился и, сбираясь повести еще сильнее свой рассказ, улыбнулся, как будто успокаивая дам, которые уже слишком были взволнованы. Совершенно неожиданно во время этой паузы красавица княжна Элен посмотрела на часы, переглянулась с отцом и вместе с ним встала, и этим движением расстроила кружок и прервала рассказ.
+   -- Мы опоздаем, пап<, -- сказала она просто, продолжая сиять на всех своею улыбкой.
+   -- Вы меня извините, мой милый виконт, -- обратился князь Василий к французу, ласково притягивая его за рукав вниз к стулу, чтобы он не вставал. -- Этот несчастный праздник у посланника лишает меня удовольствия и прерывает вас.
+   -- Очень мне грустно покидать ваш восхитительный вечер, -- сказал он Анне Павловне.
+   Дочь его, княжна Элен, слегка придерживая складки платья, пошла между стульев, и улыбка просияла еще светлее на ее прекрасном лице."""
+plaintext = keep_russian_letters(plaintext)
 
-            candidate_data = {"total_symbols": ciphertext_data['total_symbols'], "stats": {}}
-            candidate_stats = candidate_data['stats']
-            # Меняем ряд распределения текста по ключу
-            for letter in candidate_stats:
-                candidate_stats[abc[(abc.index(letter) - k) % n]] = ciphertext_stats[letter]
-
-            candidate_data['stats'] = candidate_stats
-
-            # Добавляем отсутствующие символы в статистике
-            align_distributions(reference_data, candidate_data)
-
-            # candidates = dict: {key: int, stats: {letter: {count: int, percent: float}}}
-            candidates[k] = candidate_data
-
-    k, d = find_best_key(reference_data, candidates)
-    print(f'Лучшим ключом сдвига является: k = {k} с расстоянием Йенсена-Шеннона d = {d}')
-    print(f'Результат дешифрования: {encrypt_caesar(text, -k)}')
-
-# Аффинный шифр
-def encrypt_affine(text: str, a: int, b: int, abc=None, info: bool = False):
-    print(f'Открытый текст: {text}')
-
-    if abc is None:
-        abc = rus
-
-    n = len(abc)
-
-    # Проверка взаимной простоты a и n
-    while gcd(a, n) != 1:
-        coprime_list = [i for i in range(1, n) if gcd(i, n) == 1]
-        print(
-            "Ошибка! Коэффициент a должен быть взаимнопрост с мощностью алфавита.\nВыберите новый коэффициент из предложенных: ")
-        a = int(input(f"{coprime_list}\n"))
-
-    # Убираем лишние символы
-    text = keep_russian_letters(text)
-
-    if info:
-        print(f"Шифрование y = ax + b, где a = {a}, b = {b}.")
-        for s in abc:
-            print(f"{abc.index(s)} {s} -> {(abc.index(s) * a + b) % n} {abc[(abc.index(s) * a + b) % n]}")
-
-    res = ''.join(abc[(abc.index(letter) * a + b) % n] for letter in text)
-    print(f'Результат шифрования: {res}')
-    return res
+key = "ущри чзвдглыфьэтошбякймесжаънцюпх"
+d = decrypt_ciphertext(plaintext, key)
+print(d)
+print(hack_ciphertext(d))
 
 
-def decrypt_affine(text: str, a: int, b: int, abc=None):
-    if abc is None:
-        abc = rus
 
-    n = len(abc)
-
-    while gcd(a, n) != 1:
-        coprimes = [i for i in range(1, n) if gcd(i, n) == 1]
-        print(
-            "Ошибка! Коэффициент a должен быть взаимнопрост с мощностью алфавита.\nВыберите новый коэффициент из предложенных: ")
-        a = int(input(f"{coprimes}\n"))
-    # поиск обратного с помощью расширенного алгоритма Евклида
-    ar = (gcdex(a, n)[1]) % n
-
-    res = ''.join(abc[((abc.index(letter) - b) * ar) % n] for letter in text)
-
-    return res
-
-
-def hacking_affine(text: str, abc=None):
-    if abc is None:
-        abc = rus
-
-    n = len(abc)
-
-    reference_data = load_json(Path('statistic.json'))
-    reference_stats = reference_data['stats']
-
-    ciphertext_data = symbol_stats(text)
-    ciphertext_stats = ciphertext_data['stats']
-
-
-    for i in range(3):
-        if i == 0:
-            x1 = list(reference_data['stats'].items())[0][0]
-            x1_ind = abc.index(x1)
-            x2 = list(reference_data['stats'].items())[1][0]
-            x2_ind = abc.index(x2)
-        elif i == 1:
-            x1 = list(reference_data['stats'].items())[0][0]
-            x1_ind = abc.index(x1)
-            x2 = list(reference_data['stats'].items())[2][0]
-            x2_ind = abc.index(x2)
-        elif i == 2:
-            x1 = list(reference_data['stats'].items())[1][0]
-            x1_ind = abc.index(x1)
-            x2 = list(reference_data['stats'].items())[2][0]
-            x2_ind = abc.index(x2)
-
-    x1 = abc.index(" ")  # first_ind
-    if abc == rus:
-        x2 = abc.index("о")
-    else:
-        x2 = abc.index("e")  # second_ind
-    chars = char_distr(text, 2)
-    y1 = abc.index(chars[0][0])  # new_first_ind
-    y2 = abc.index(chars[1][0])  # new_second_ind
-    a = ((y2 - y1) * gcdex(((x2 - x1) % n), n)[1]) % n
-    b = (y1 - x1 * a) % n
-    print(a, b)
-    return decrypt_affine(text, a, b, abc)
-
-
-def encrypt_replacement(text: str, abc: dict[str, str]):
-    res = ""
-    for symb in text:
-        res += abc[symb]
-    return res
-
-# Проверка работоспособности дешифратора шифра Цезаря
-# for k in range(33):
-#     hacking_caesar(encrypt_caesar("Брехня! — уверенно опровергал широколицый красногвардеец. — Брехню вам всучивают. Я перед тем как из Ростова выйтить, в церкву ходил и причастие принимал.", k))

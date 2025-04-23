@@ -120,16 +120,23 @@ def symbol_stats(text, data=None):
 #     return distribution
 
 
-def compare_distributions_JS(reference, candidate) -> float:
+def compare_distributions_JS(reference_data, candidate_data) -> float:
     """
     Сравнивает два распределения с помощью расстояния Йенсена-Шеннона.
     """
-    reference = np.array(reference)
-    candidate = np.array(candidate)
+    sort_reference_data, sort_candidate_data = align_distributions(reference_data, candidate_data)
+
+    reference_counts = [sort_reference_data['stats'][letter]['count'] for letter in sort_reference_data['stats'].keys()]
+    candidate_counts = [sort_candidate_data['stats'][letter]['count'] for letter in sort_candidate_data['stats'].keys()]
+
+    reference_dist = np.array(reference_counts)
+    candidate_dist = np.array(candidate_counts)
 
     # Преобразуем абсолютные частоты в вероятности
-    reference_probs = reference / np.sum(reference)
-    candidate_probs = candidate / np.sum(candidate)
+    reference_probs = reference_dist / np.sum(reference_dist)
+    candidate_probs = candidate_dist / np.sum(candidate_dist)
+
+    print(candidate_probs)
 
     return jensenshannon(reference_probs, candidate_probs)
 
@@ -166,8 +173,7 @@ def collect_statistic():
 
 
 if __name__ == "__main__":
-    d = symbol_stats("Привет как дела")
-    r = load_json(Path('statistic.json'))
-    r, d = align_distributions(r,d)
-    print(len(r['stats']))
-    print(len(d['stats']))
+    text = "Джъгс еёюгджюз эдбдзръ бюжзсф, еёдкбхщгря чъзъё ю иузгръ чъмъёх. Бущю буцфз тзд чёъвф эх фёаюъ аёхжаю еёюёдщр ю чдэвдьгджзс ждшёъзсжф мхнадя шдёфмъшд мхф. Щгю жзхгдчфзжф адёдмъ, х гдмю щбюггъъ, еёюшбхнхф а дзщрки. Ч чдэщикъ мичжзчиъзжф дждцря нхёв еъёъвъг."
+    t = symbol_stats(keep_russian_letters(text))
+    r = load_json(Path("statistic.json"))
+    print(compare_distributions_JS(r,t))
