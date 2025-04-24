@@ -1,32 +1,14 @@
-import string, heapq, random
+import random
 from pathlib import Path
 
-from scipy.spatial import distance_matrix
 
-from Statistic import keep_russian_letters, load_json, symbol_stats, align_distributions, \
-    compare_distributions_JS
+from Statistic import keep_russian_letters, load_json, symbol_stats, compare_distributions_JS
 
 rus = ['а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т',
        'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ', 'ъ', 'ы', 'ь', 'э', 'ю', ' ', 'я']
 eng = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
        'w', 'x', 'y', 'z', ' ']
 
-
-# Алгоритм Евклида
-def gcd(a, b):
-    while b != 0:
-        a, b = b, a % b
-    return a
-
-
-# Расширенный алгоритм Евклида
-def gcdex(a, b):
-    if a == 0:
-        return (b, 0, 1)
-    d, x1, y1 = gcdex(b % a, a)
-    x = y1 - (b // a) * x1
-    y = x1
-    return (d, x, y)
 
 
 def shuffle_string(s):
@@ -50,10 +32,17 @@ def swap_two_random_chars(s):
 
 
 def decrypt_ciphertext(ciphertext, key):
+    ciphertext = keep_russian_letters(ciphertext)
     res = ''
-    for i in range(len(ciphertext)):
-         res += key[rus.index(ciphertext[i])]
+    for symbol in ciphertext:
+         res += key[rus.index(symbol)]
     return res
+
+def reverse_key(key):
+    rev_key = 33*['']
+    for i in range(len(key)):
+        rev_key[rus.index(key[i])] = rus[i]
+    return rev_key
 
 
 def hack_ciphertext(ciphertext):
@@ -121,9 +110,6 @@ plaintext = """ Убери все символы переноса строки
 plaintext = keep_russian_letters(plaintext)
 
 key = "ущри чзвдглыфьэтошбякймесжаънцюпх"
-d = decrypt_ciphertext(plaintext, key)
-print(d)
-print(hack_ciphertext(d))
-
+print(decrypt_ciphertext(decrypt_ciphertext("Привет", key), reverse_key(key)))
 
 
