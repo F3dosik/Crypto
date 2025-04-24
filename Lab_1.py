@@ -1,14 +1,13 @@
+# -*- coding: utf-8 -*-
+
 import random
 from pathlib import Path
-
-
-from Statistic import keep_russian_letters, load_json, symbol_stats, compare_distributions_JS
+from Statistic import keep_russian_letters, load_json, load_text, symbol_stats, compare_distributions_JS, get_bigrams
 
 rus = ['а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т',
        'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ', 'ъ', 'ы', 'ь', 'э', 'ю', ' ', 'я']
 eng = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
        'w', 'x', 'y', 'z', ' ']
-
 
 
 def shuffle_string(s):
@@ -34,12 +33,13 @@ def swap_two_random_chars(s):
 def decrypt_ciphertext(ciphertext, key):
     ciphertext = keep_russian_letters(ciphertext)
     res = ''
-    for symbol in ciphertext:
-         res += key[rus.index(symbol)]
+    for i in range(len(ciphertext)):
+        res += key[rus.index(ciphertext[i])]
     return res
 
+
 def reverse_key(key):
-    rev_key = 33*['']
+    rev_key = 33 * ['']
     for i in range(len(key)):
         rev_key[rus.index(key[i])] = rus[i]
     return rev_key
@@ -52,7 +52,6 @@ def hack_ciphertext(ciphertext):
     # key = shuffle_abc
     key = "ущри чзвдглыфьэтошбякймесжаънцюпх"
     print(key)
-
 
     temp_decrypt = decrypt_ciphertext(ciphertext, key)
 
@@ -82,6 +81,7 @@ def hack_ciphertext(ciphertext):
     # print(distance)
     return decrypt_ciphertext(ciphertext, key)
 
+
 plaintext = """ Убери все символы переноса строки
 Новое лицо это был молодой князь Андрей Болконский, муж маленькой княгини. Не столько по тому, что молодой князь приехал так поздно, но все-таки был принят хозяйкой самым любезным образом, сколько по тому, как он вошел в комнату, было видно, что он один из тех светских молодых людей, которые так избалованы светом, что даже презирают его. Молодой князь был небольшого роста, весьма красивый, сухощавый брюнет, с несколько истощенным видом, коричневым цветом лица, в чрезвычайно изящной одежде и с крошечными руками и ногами. Все в его фигуре, начиная от усталого, скучающего взгляда до ленивой и слабой походки, представляло самую резкую противоположность с его маленькою, оживленною женой. Ему, видимо, все бывшие в гостиной не только были знакомы, но уж надоели ему так, что и смотреть на них и слушать их ему было очень скучно, потому что он вперед знал все, что будет. Из всех же прискучивших ему лиц лицо его хорошенькой жены, казалось, больше всех ему надоело. С кислою, слабою гримасой, портившей его красивое лицо, он отвернулся от нее, как будто подумал: "Тебя только недоставало, чтобы вся эта компания совсем мне опротивела". Он поцеловал руку Анны Павловны с таким видом, как будто готов был бог знает что дать, чтоб избавиться от этой тяжелой обязанности, и щурясь, почти закрывая глаза и морщась, оглядывал все общество.
    -- У вас съезд, -- сказал он тоненьким голоском и кивнул головой кое-кому, кое-кому подставил свою руку, предоставляя ее пожатию.
@@ -110,6 +110,6 @@ plaintext = """ Убери все символы переноса строки
 plaintext = keep_russian_letters(plaintext)
 
 key = "ущри чзвдглыфьэтошбякймесжаънцюпх"
-print(decrypt_ciphertext(decrypt_ciphertext("Привет", key), reverse_key(key)))
-
-
+d = decrypt_ciphertext(plaintext, key)
+print(d)
+print(hack_ciphertext(d))

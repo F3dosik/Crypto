@@ -1,13 +1,21 @@
-import sys, os
+import sys, re
 from pathlib import Path
 import json
 from scipy.spatial.distance import jensenshannon
 import numpy as np
 
+from collections import Counter
+
+
+def get_bigrams(text):
+    bigrams = [text[i:i + 2] for i in range(len(text) - 1)]
+    return Counter(bigrams).most_common()
+
 
 def keep_russian_letters(text):
     text = text.lower()
-    return ''.join(c for c in text if ('а' <= c <= 'я') or (c == " "))
+    cleaned = ''.join(c for c in text if ('а' <= c <= 'я') or (c == " "))
+    return re.sub(r'\s+', ' ', cleaned).strip()
 
 
 def create_json(file_path):
@@ -20,7 +28,7 @@ def create_json(file_path):
     print(f"Файл {file_path} создан.")
 
 
-def load_json(path, log_mode = False) -> dict:
+def load_json(path, log_mode=False) -> dict:
     """
     Загружает данные из JSON-файла.
     Если файл не существует, пуст или поврежден, создает новый файл или завершает программу.
@@ -173,7 +181,5 @@ def collect_statistic():
 
 
 if __name__ == "__main__":
-    text = "Джъгс еёюгджюз эдбдзръ бюжзсф, еёдкбхщгря чъзъё ю иузгръ чъмъёх. Бущю буцфз тзд чёъвф эх фёаюъ аёхжаю еёюёдщр ю чдэвдьгджзс ждшёъзсжф мхнадя шдёфмъшд мхф. Щгю жзхгдчфзжф адёдмъ, х гдмю щбюггъъ, еёюшбхнхф а дзщрки. Ч чдэщикъ мичжзчиъзжф дждцря нхёв еъёъвъг."
-    t = symbol_stats(keep_russian_letters(text))
-    r = load_json(Path("statistic.json"))
-    print(compare_distributions_JS(r,t))
+    text = " Привет,  как у тея дела - малыш   "
+    print(keep_russian_letters(text))
