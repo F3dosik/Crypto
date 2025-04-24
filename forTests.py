@@ -1,1 +1,2 @@
-print(chr(3))
+a = "adwji"
+print(list(a))
