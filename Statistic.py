@@ -140,17 +140,6 @@ def bigram_stats(text, data=None):
     return data
 
 
-# def extract_distribution(data) -> list:
-#     """
-#     Извлекает список частот символов из структуры распределения.
-#     """
-#     stats = data["stats"]
-#     # Сортируем символы по алфавиту для согласованности
-#     sorted_symbols = sorted(stats.keys())
-#     distribution = [stats[symbol]["count"] for symbol in sorted_symbols]
-#     return distribution
-
-
 def compare_distributions_JS(reference_data, candidate_data) -> float:
     """
     Сравнивает два распределения с помощью расстояния Йенсена-Шеннона.
@@ -168,27 +157,6 @@ def compare_distributions_JS(reference_data, candidate_data) -> float:
     candidate_probs = candidate_dist / np.sum(candidate_dist)
 
     return jensenshannon(reference_probs, candidate_probs)
-
-
-# def compare_distributions_JS_bigram(reference_data, candidate_data) -> float:
-#     """
-#     Сравнивает два распределения с помощью расстояния Йенсена-Шеннона.
-#     """
-#     sort_reference_data, sort_candidate_data = align_distributions(reference_data, candidate_data)
-#
-#     reference_counts = [sort_reference_data['stats'][letter]['count'] for letter in sort_reference_data['stats'].keys()]
-#     candidate_counts = [sort_candidate_data['stats'][letter]['count'] for letter in sort_candidate_data['stats'].keys()]
-#
-#     reference_dist = np.array(reference_counts)
-#     candidate_dist = np.array(candidate_counts)
-#
-#     # Преобразуем абсолютные частоты в вероятности
-#     reference_probs = reference_dist / np.sum(reference_dist)
-#     candidate_probs = candidate_dist / np.sum(candidate_dist)
-#
-#     print(candidate_probs)
-#
-#     return jensenshannon(reference_probs, candidate_probs)
 
 
 def align_distributions(reference, candidate) -> tuple[dict, dict]:
