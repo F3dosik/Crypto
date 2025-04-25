@@ -1,2 +1,2 @@
-a = "adwji"
-print(list(a))
+a = ['a', 'f', 'h', 'o', 'u', 'a', 'w', 'h', 'o', 'f']
+print(''.join(a))

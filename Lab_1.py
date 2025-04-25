@@ -1,6 +1,7 @@
 import random
 from pathlib import Path
-from Statistic import keep_russian_letters, load_json, symbol_stats, compare_distributions_JS, bigram_stats
+from Statistic import keep_russian_letters, load_json, symbol_stats, compare_distributions_JS, bigram_stats, \
+    trigram_stats
 
 rus = ['а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'к', 'л', 'м', 'н', 'о', 'п', 'р', 'с', 'т',
        'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ', 'ъ', 'ы', 'ь', 'э', 'ю', ' ', 'я']
@@ -47,30 +48,45 @@ def hack_ciphertext_JS(ciphertext):
 
     ciphertext_mono_stats = symbol_stats(temp_decrypt)
     ciphertext_bi_stats = bigram_stats(temp_decrypt)
+    ciphertext_tri_stats = trigram_stats(temp_decrypt)
 
     reference_mono_stats = load_json(Path('statistic_symbols.json'))
     reference_bi_stats = load_json(Path('statistic_bigrams.json'))
+    reference_tri_stats = load_json(Path('statistic_trigrams.json'))
 
     distance_JS_mono = compare_distributions_JS(reference_mono_stats, ciphertext_mono_stats)
     distance_JS_bi = compare_distributions_JS(reference_bi_stats, ciphertext_bi_stats)
+    distance_JS_tri = compare_distributions_JS(reference_tri_stats, ciphertext_tri_stats)
 
-    alpha = 0.2
+    alpha = 0.3
+    beta = 0.2
+    gamma = 0.5
 
-    total_distance = distance_JS_mono * alpha + distance_JS_bi * (1 - alpha)
+    total_distance = distance_JS_mono * alpha + distance_JS_bi * beta + distance_JS_tri * gamma
 
     key_stability = 0
 
     while key_stability != 1000:
+        # alpha = 0.6
+        # beta = 0.3
+        # gamma = 0.1
+        # if key_stability >= 800:
+        #     alpha = 0.3
+        #     beta = 0.4
+        #     gamma = 0.3
+
         key_tmp = swap_two_random_chars(key)
         temp_decrypt = decrypt_ciphertext(ciphertext, key_tmp)
 
         ciphertext_mono_stats = symbol_stats(temp_decrypt)
         ciphertext_bi_stats = bigram_stats(temp_decrypt)
+        ciphertext_tri_stats = trigram_stats(temp_decrypt)
 
         distance_JS_mono = compare_distributions_JS(reference_mono_stats, ciphertext_mono_stats)
         distance_JS_bi = compare_distributions_JS(reference_bi_stats, ciphertext_bi_stats)
+        distance_JS_tri = compare_distributions_JS(reference_tri_stats, ciphertext_tri_stats)
 
-        temp_total_distance = distance_JS_mono * alpha + distance_JS_bi * (1 - alpha)
+        temp_total_distance = distance_JS_mono * alpha + distance_JS_bi * beta + distance_JS_tri * gamma
         print(key_tmp)
         print(temp_total_distance)
 
@@ -114,9 +130,10 @@ plaintext = """ Убери все символы переноса строки
        -- Очень мне грустно покидать ваш восхитительный вечер, -- сказал он Анне Павловне.
        Дочь его, княжна Элен, слегка придерживая складки платья, пошла между стульев, и улыбка просияла еще светлее на ее прекрасном лице."""
 p = "В осеннем парке было почти безлюдно ветер медленно кружил опавшие листья золотые и багряные дорожки были устланы мягким ковром шелестевшим под ногами старые деревья тянули к небу обнаженные ветви будто молча беседовали с облаками редкие прохожие неспешно бродили наслаждаясь прохладой и тишиной где то вдалеке послышался скрип качелей и звонкий смех ребенка эхом отозвался среди аллей на скамейке у фонтана сидела женщина в пальто читала книгу словно не замечая ни прохожих ни времени ее мир был погружен в строчки и осенняя меланхолия вокруг казалась частью этой истории"
+
 d = decrypt_ciphertext(p, key)
-k = hack_ciphertext_JS(d)
-print(decrypt_ciphertext(d, k))
-print(k)
+best_key = hack_ciphertext_JS(d)
+print(decrypt_ciphertext(d, best_key))
 print(rev_key)
-print(keys_matching(k, rev_key))
+print(best_key)
+print(keys_matching(rev_key, best_key))
