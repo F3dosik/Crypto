@@ -19,15 +19,14 @@ def shuffle_string(s):
     return ''.join(chars)
 
 
-def swap_two_random_chars(s):
+def swap_two_random_chars(key):
     # Преобразуем строку в список символов (так как строки неизменяемы)
-    chars = list(s)
     # Выбираем два случайных индекса
-    i, j = random.sample(range(len(chars)), 2)
+    i, j = random.sample(range(len(key)), 2)
     # Меняем символы местами
-    chars[i], chars[j] = chars[j], chars[i]
+    key[i], key[j] = key[j], key[i]
     # Собираем обратно в строку
-    return ''.join(chars)
+    return key
 
 
 def decrypt_ciphertext(ciphertext, key):
@@ -44,14 +43,16 @@ def reverse_key(key):
         rev_key[rus.index(key[i])] = rus[i]
     return rev_key
 
+def keys_matching(k1, k2):
+    return sum(a == b for a, b in zip(k1, k2))
 
 def hack_ciphertext_JS(ciphertext):
     # Инициализируем k случайным перемешиванием алфавита
     # shuffle_abc = rus[:]
     # random.shuffle(shuffle_abc)
     # key = shuffle_abc
-    key = "ущри чзвдглыфьэтошбякймесжаънцюпх"
-    print(key)
+    key = ['у', 'щ', 'р', 'и', ' ', 'ч', 'з', 'в', 'д', 'г', 'л', 'ы', 'ф', 'ь', 'э', 'т', 'о', 'ш', 'б', 'я', 'к', 'й',
+           'м', 'е', 'с', 'ж', 'а', 'ъ', 'н', 'ц', 'ю', 'п', 'х']
 
     temp_decrypt = decrypt_ciphertext(ciphertext, key)
 
@@ -73,20 +74,93 @@ def hack_ciphertext_JS(ciphertext):
             key = key_tmp
         elif temp_distance >= distance:
             key_stability += 1
+        print(key)
 
-    # print(key)
-    # print(distance)
     return key
+
+# def hack_ciphertext_JS(ciphertext):
+#     # Инициализируем k случайным перемешиванием алфавита
+#     # shuffle_abc = rus[:]
+#     # random.shuffle(shuffle_abc)
+#     # key = shuffle_abc
+#     key = ['у', 'щ', 'р', 'и', ' ', 'ч', 'з', 'в', 'д', 'г', 'л', 'ы', 'ф', 'ь', 'э', 'т', 'о', 'ш', 'б', 'я', 'к', 'й',
+#            'м', 'е', 'с', 'ж', 'а', 'ъ', 'н', 'ц', 'ю', 'п', 'х']
+#
+#     temp_decrypt = decrypt_ciphertext(ciphertext, key)
+#
+#     ciphertext_mono_stats = symbol_stats(temp_decrypt)
+#     ciphertext_bi_stats = bigram_stats(temp_decrypt)
+#
+#     reference_mono_stats = load_json(Path('statistic_symbols.json'))
+#     reference_bi_stats = load_json(Path('statistic_bigrams.json'))
+#
+#     distance_JS_mono = compare_distributions_JS(reference_mono_stats, ciphertext_mono_stats)
+#     distance_JS_bi = compare_distributions_JS(reference_bi_stats, ciphertext_bi_stats)
+#
+#     alpha = 1
+#
+#     total_distance = distance_JS_mono * alpha + distance_JS_bi * (1 - alpha)
+#
+#     key_stability = 0
+#
+#     while key_stability != 10000:
+#         key_tmp = swap_two_random_chars(key)
+#         temp_decrypt = decrypt_ciphertext(ciphertext, key_tmp)
+#
+#         ciphertext_mono_stats = symbol_stats(temp_decrypt)
+#         ciphertext_bi_stats = bigram_stats(temp_decrypt)
+#
+#         distance_JS_mono = compare_distributions_JS(reference_mono_stats, ciphertext_mono_stats)
+#         distance_JS_bi = compare_distributions_JS(reference_bi_stats, ciphertext_bi_stats)
+#
+#         temp_total_distance = distance_JS_mono * alpha + distance_JS_bi * (1 - alpha)
+#         print(key_tmp)
+#         print(temp_total_distance)
+#
+#         if temp_total_distance < total_distance:
+#             total_distance = temp_total_distance
+#             key_stability = 0
+#             key = key_tmp
+#         elif temp_total_distance >= total_distance:
+#             key_stability += 1
+#
+#     print(total_distance)
+#     return key
 
 
 def hack_ciphertext_bigrams(ciphertext, key):
-    ciphertext_JS = decrypt_ciphertext(ciphertext, key)
-    reference_data = load_json(Path('statistic_bigrams.json'))
-    reference_stats_list = list(reference_data["stats"].items())
-    temp_decrypt_data = bigram_stats(ciphertext_JS)
-    key_list = list(key)
-    temp_key = key_list
-    distance_JS = compare_distributions_JS(reference_data, c)
+    ciphertext_mono = decrypt_ciphertext(ciphertext, key)
+
+    ciphertext_mono_stats = symbol_stats(ciphertext_mono)
+    ciphertext_bi_stats = bigram_stats(ciphertext_mono)
+
+    reference_mono_stats = load_json(Path('statistic_symbols.json'))
+    reference_bi_stats = load_json(Path('statistic_bigrams.json'))
+
+    reference_stats_list = list(reference_bi_stats["stats"].items())
+
+    distance_JS_mono = compare_distributions_JS(reference_mono_stats, ciphertext_mono_stats)
+    distance_JS_bi = compare_distributions_JS(reference_bi_stats, ciphertext_bi_stats)
+
+    alpha = 0.5
+
+    total_distance = distance_JS_mono * alpha + distance_JS_bi * (1 - alpha)
+
+    key_stability = 0
+
+    while key_stability != 10000:
+        key_tmp = swap_two_random_chars(key)
+        temp_decrypt = decrypt_ciphertext(ciphertext, key_tmp)
+        temp_decrypt_data = symbol_stats(temp_decrypt)
+        temp_distance = compare_distributions_JS(reference_data, temp_decrypt_data)
+        if temp_distance < distance:
+            distance = temp_distance
+            key_stability = 0
+            key = key_tmp
+        elif temp_distance >= distance:
+            key_stability += 1
+        print(key)
+
     for i in range(len(ciphertext_JS) - 1):
         bigram = ciphertext_JS[i:i + 2]
         min_diff = float('inf')
@@ -103,8 +177,13 @@ def hack_ciphertext_bigrams(ciphertext, key):
         temp_decrypt = decrypt_ciphertext(ciphertext)
 
 
-key = "ущри чзвдглыфьэтошбякймесжаънцюпх"
-key_new = "ълычнжщйзцфвюяк рхпедьэасбгтиошум"
+def hack(ciphertext):
+    key = hack_ciphertext_JS(ciphertext)
+    hack_ciphertext_bigrams(ciphertext, key)
+
+
+key = ['у', 'щ', 'р', 'и', ' ', 'ч', 'з', 'в', 'д', 'г', 'л', 'ы', 'ф', 'ь', 'э', 'т', 'о', 'ш', 'б', 'я', 'к', 'й', 'м', 'е', 'с', 'ж', 'а', 'ъ', 'н', 'ц', 'ю', 'п', 'х']
+rev_key = reverse_key(key)
 plaintext = """ Убери все символы переноса строки
     Новое лицо это был молодой князь Андрей Болконский, муж маленькой княгини. Не столько по тому, что молодой князь приехал так поздно, но все-таки был принят хозяйкой самым любезным образом, сколько по тому, как он вошел в комнату, было видно, что он один из тех светских молодых людей, которые так избалованы светом, что даже презирают его. Молодой князь был небольшого роста, весьма красивый, сухощавый брюнет, с несколько истощенным видом, коричневым цветом лица, в чрезвычайно изящной одежде и с крошечными руками и ногами. Все в его фигуре, начиная от усталого, скучающего взгляда до ленивой и слабой походки, представляло самую резкую противоположность с его маленькою, оживленною женой. Ему, видимо, все бывшие в гостиной не только были знакомы, но уж надоели ему так, что и смотреть на них и слушать их ему было очень скучно, потому что он вперед знал все, что будет. Из всех же прискучивших ему лиц лицо его хорошенькой жены, казалось, больше всех ему надоело. С кислою, слабою гримасой, портившей его красивое лицо, он отвернулся от нее, как будто подумал: "Тебя только недоставало, чтобы вся эта компания совсем мне опротивела". Он поцеловал руку Анны Павловны с таким видом, как будто готов был бог знает что дать, чтоб избавиться от этой тяжелой обязанности, и щурясь, почти закрывая глаза и морщась, оглядывал все общество.
        -- У вас съезд, -- сказал он тоненьким голоском и кивнул головой кое-кому, кое-кому подставил свою руку, предоставляя ее пожатию.
@@ -130,14 +209,12 @@ plaintext = """ Убери все символы переноса строки
        -- Вы меня извините, мой милый виконт, -- обратился князь Василий к французу, ласково притягивая его за рукав вниз к стулу, чтобы он не вставал. -- Этот несчастный праздник у посланника лишает меня удовольствия и прерывает вас.
        -- Очень мне грустно покидать ваш восхитительный вечер, -- сказал он Анне Павловне.
        Дочь его, княжна Элен, слегка придерживая складки платья, пошла между стульев, и улыбка просияла еще светлее на ее прекрасном лице."""
-d = decrypt_ciphertext(plaintext, key_new)
+d = decrypt_ciphertext(plaintext, key)
+k = hack_ciphertext_JS(d)
+print(decrypt_ciphertext(d, k))
+print(k)
+print(rev_key)
+print(keys_matching(k, rev_key))
 
 
-ref_stat_bi = load_json(Path('statistic_bigrams.json'))
-ref_stat = load_json(Path('statistic_symbols.json'))
-ciph_stat_bi = bigram_stats(d)
-ciph_stat = symbol_stats(d)
-
-print(compare_distributions_JS(ref_stat_bi, ciph_stat_bi))
-print(compare_distributions_JS(ref_stat, ciph_stat))
 

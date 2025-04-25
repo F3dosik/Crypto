@@ -170,25 +170,25 @@ def compare_distributions_JS(reference_data, candidate_data) -> float:
     return jensenshannon(reference_probs, candidate_probs)
 
 
-def compare_distributions_JS_bigram(reference_data, candidate_data) -> float:
-    """
-    Сравнивает два распределения с помощью расстояния Йенсена-Шеннона.
-    """
-    sort_reference_data, sort_candidate_data = align_distributions(reference_data, candidate_data)
-
-    reference_counts = [sort_reference_data['stats'][letter]['count'] for letter in sort_reference_data['stats'].keys()]
-    candidate_counts = [sort_candidate_data['stats'][letter]['count'] for letter in sort_candidate_data['stats'].keys()]
-
-    reference_dist = np.array(reference_counts)
-    candidate_dist = np.array(candidate_counts)
-
-    # Преобразуем абсолютные частоты в вероятности
-    reference_probs = reference_dist / np.sum(reference_dist)
-    candidate_probs = candidate_dist / np.sum(candidate_dist)
-
-    print(candidate_probs)
-
-    return jensenshannon(reference_probs, candidate_probs)
+# def compare_distributions_JS_bigram(reference_data, candidate_data) -> float:
+#     """
+#     Сравнивает два распределения с помощью расстояния Йенсена-Шеннона.
+#     """
+#     sort_reference_data, sort_candidate_data = align_distributions(reference_data, candidate_data)
+#
+#     reference_counts = [sort_reference_data['stats'][letter]['count'] for letter in sort_reference_data['stats'].keys()]
+#     candidate_counts = [sort_candidate_data['stats'][letter]['count'] for letter in sort_candidate_data['stats'].keys()]
+#
+#     reference_dist = np.array(reference_counts)
+#     candidate_dist = np.array(candidate_counts)
+#
+#     # Преобразуем абсолютные частоты в вероятности
+#     reference_probs = reference_dist / np.sum(reference_dist)
+#     candidate_probs = candidate_dist / np.sum(candidate_dist)
+#
+#     print(candidate_probs)
+#
+#     return jensenshannon(reference_probs, candidate_probs)
 
 
 def align_distributions(reference, candidate) -> tuple[dict, dict]:
@@ -201,6 +201,9 @@ def align_distributions(reference, candidate) -> tuple[dict, dict]:
     # Добавляем отсутствующие символы в кандидата
     for symbol in reference_symbols - candidate_symbols:
         candidate['stats'][symbol] = {"count": 0, "percent": 0}
+
+    for symbol in candidate_symbols - reference_symbols:
+        reference['stats'][symbol] = {"count": 0, "percent": 0}
 
     # Сортируем символы по алфавиту
     sorted_reference_stats = dict(sorted(reference['stats'].items(), key=lambda item: item[0]))
