@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 import sys
 import re
+from functools import total_ordering
 from pathlib import Path
 import json
 from scipy.spatial.distance import jensenshannon
@@ -14,8 +15,15 @@ def keep_russian_letters(text):
 
 
 def create_json(file_path):
+    total_name = ''
     """Создает новый пустой JSON-файл."""
-    data = {"total_symbols": 0,
+    if file_path == Path("statistic_symbols.json"):
+        total_name = "total_symbols"
+    elif file_path == Path("statistic_bigrams.json"):
+        total_name = "total_bigrams"
+    elif file_path == Path("statistic_trigrams.json"):
+        total_name = "total_trigrams"
+    data = {total_name: 0,
             "stats": {}
             }
     with file_path.open("w", encoding="utf-8") as file:
@@ -104,8 +112,18 @@ def symbol_stats(text, data=None):
         else:
             data["stats"][letter]["count"] += 1
 
+    # Решил собирать статистику более точно через numpy
+    counts = [data['stats'][letter]['count'] for letter in data['stats'].keys()]
+    dist = np.array(counts)
+    probs = dist / np.sum(dist)
+
+    i = 0
     for letter in data["stats"]:
-        data["stats"][letter]["percent"] = round((data["stats"][letter]["count"] / data['total_symbols']) * 100, 3)
+        data["stats"][letter]["percent"] = probs[i]
+        i += 1
+    # for letter in data["stats"]:
+    #     data["stats"][letter]["percent"] = (data["stats"][letter]["count"] / data['total_symbols']) * 100
+
 
     sorted_stats = dict(sorted(data['stats'].items(), key=lambda item: item[1]['count'], reverse=True))
     data['stats'] = sorted_stats
@@ -126,9 +144,18 @@ def bigram_stats(text, data=None):
         else:
             data["stats"][bigram]["count"] += 1
 
+    # Решил собирать статистику более точно через numpy
+    counts = [data['stats'][letter]['count'] for letter in data['stats'].keys()]
+    dist = np.array(counts)
+    probs = dist / np.sum(dist)
+
+    i = 0
     for bigram in data["stats"]:
-        data["stats"][bigram]["percent"] = round(
-            (data["stats"][bigram]["count"] / data["total_bigrams"]) * 100, 10)
+        data["stats"][bigram]["percent"] = probs[i]
+        i += 1
+    # for bigram in data["stats"]:
+    #     data["stats"][bigram]["percent"] = round(
+    #         (data["stats"][bigram]["count"] / data["total_bigrams"]) * 100, 10)
 
     sorted_stats = dict(sorted(data["stats"].items(), key=lambda item: item[1]["count"], reverse=True))
     data["stats"] = sorted_stats
@@ -149,9 +176,18 @@ def trigram_stats(text, data=None):
         else:
             data["stats"][trigram]["count"] += 1
 
+    # Решил собирать статитстику более точно через numpy
+    counts = [data['stats'][letter]['count'] for letter in data['stats'].keys()]
+    dist = np.array(counts)
+    probs = dist / np.sum(dist)
+
+    i = 0
     for trigram in data["stats"]:
-        data["stats"][trigram]["percent"] = round(
-            (data["stats"][trigram]["count"] / data["total_trigrams"]) * 100, 10)
+        data["stats"][trigram]["percent"] = probs[i]
+        i += 1
+    # for trigram in data["stats"]:
+    #     data["stats"][trigram]["percent"] = round(
+    #         (data["stats"][trigram]["count"] / data["total_trigrams"]) * 100, 10)
 
     sorted_stats = dict(sorted(data["stats"].items(), key=lambda item: item[1]["count"], reverse=True))
     data["stats"] = sorted_stats
@@ -164,15 +200,17 @@ def compare_distributions_JS(reference_data, candidate_data) -> float:
     """
     sort_reference_data, sort_candidate_data = align_distributions(reference_data, candidate_data)
 
-    reference_counts = [sort_reference_data['stats'][letter]['count'] for letter in sort_reference_data['stats'].keys()]
-    candidate_counts = [sort_candidate_data['stats'][letter]['count'] for letter in sort_candidate_data['stats'].keys()]
+    # reference_counts = [sort_reference_data['stats'][letter]['count'] for letter in sort_reference_data['stats'].keys()]
+    # candidate_counts = [sort_candidate_data['stats'][letter]['count'] for letter in sort_candidate_data['stats'].keys()]
 
-    reference_dist = np.array(reference_counts)
-    candidate_dist = np.array(candidate_counts)
-
-    # Преобразуем абсолютные частоты в вероятности
-    reference_probs = reference_dist / np.sum(reference_dist)
-    candidate_probs = candidate_dist / np.sum(candidate_dist)
+    # reference_dist = np.array(reference_counts)
+    # candidate_dist = np.array(candidate_counts)
+    #
+    # # Преобразуем абсолютные частоты в вероятности
+    # reference_probs = reference_dist / np.sum(reference_dist)
+    # candidate_probs = candidate_dist / np.sum(candidate_dist)
+    reference_probs = [sort_reference_data['stats'][letter]['percent'] for letter in sort_reference_data['stats'].keys()]
+    candidate_probs = [sort_candidate_data['stats'][letter]['percent'] for letter in sort_candidate_data['stats'].keys()]
 
     return jensenshannon(reference_probs, candidate_probs)
 
@@ -201,18 +239,28 @@ def align_distributions(reference, candidate) -> tuple[dict, dict]:
 
 def collect_statistic():
     """Вычисляет ряд распределения символов."""
-    stat_path = Path("statistic_symbols.json")
+    symbol_stat_path = Path("statistic_symbols.json")
+    bigram_stat_path = Path("statistic_bigrams.json")
+    trigram_stat_path = Path("statistic_trigrams.json")
+
+    data_symbol = load_json(symbol_stat_path)
+    data_bigram = load_json(bigram_stat_path)
+    data_trigram = load_json(trigram_stat_path)
+
     text_path = Path("text.txt")
-    data = load_json(stat_path)
     text = load_text(text_path)
 
     print("Происходит сбор статистики...")
-    symbol_stats(text, data)
-    update_json(stat_path, data)
+    symbol_stats(text, data_symbol)
+    update_json(symbol_stat_path, data_symbol)
+
+    bigram_stats(text, data_bigram)
+    update_json(bigram_stat_path, data_bigram)
+
+    trigram_stats(text, data_trigram)
+    update_json(trigram_stat_path, data_trigram)
 
 
 if __name__ == "__main__":
-    p = "В осеннем парке было почти безлюдно ветер медленно кружил опавшие листья золотые и багряные дорожки были устланы мягким ковром шелестевшим под ногами старые деревья тянули к небу обнаженные ветви будто молча беседовали с облаками редкие прохожие неспешно бродили наслаждаясь прохладой и тишиной где то вдалеке послышался скрип качелей и звонкий смех ребенка эхом отозвался среди аллей на скамейке у фонтана сидела женщина в пальто читала книгу словно не замечая ни прохожих ни времени ее мир был погружен в строчки и осенняя меланхолия вокруг казалась частью этой истории"
-    ref = load_json(Path('statistic_trigrams.json'))
-    stats = trigram_stats(p)
-    print(compare_distributions_JS(ref, stats))
+    collect_statistic()
+
