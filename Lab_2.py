@@ -20,6 +20,8 @@ def vigenere(plaintext, key, mode="encrypt"):
         shift_func = lambda p, k: (rus.index(p) + rus.index(k)) % 33
     elif mode == "decrypt":  # Дешифрование
         shift_func = lambda p, k: (rus.index(p) - rus.index(k)) % 33
+    else:
+        raise ValueError("Режим может быть только encrypt и decrypt")
 
     for i in range(len(plaintext)):
         p = plaintext[i]
