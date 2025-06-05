@@ -1,6 +1,5 @@
 from collections import Counter
 import math
-from idlelib.editor import index2line
 
 from Statistic import load_json, keep_russian_letters, load_text, symbol_stats
 from pathlib import Path
@@ -11,15 +10,15 @@ rus = [' ', 'а', 'б', 'в', 'г', 'д', 'е', 'ж', 'з', 'и', 'й', 'к', '�
        'у', 'ф', 'х', 'ц', 'ч', 'ш', 'щ', 'ъ', 'ы', 'ь', 'э', 'ю', 'я']
 
 
-def vigenere(plaintext, key, mode=1):
+def vigenere(plaintext, key, mode="encrypt"):
     plaintext = keep_russian_letters(plaintext)
     key = keep_russian_letters(key)
     res = ''
     key_ind = 0
 
-    if mode:  # Шифрование
+    if mode == "encrypt":  # Шифрование
         shift_func = lambda p, k: (rus.index(p) + rus.index(k)) % 33
-    else:  # Дешифрование
+    elif mode == "decrypt":  # Дешифрование
         shift_func = lambda p, k: (rus.index(p) - rus.index(k)) % 33
 
     for i in range(len(plaintext)):
